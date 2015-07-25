@@ -1,0 +1,23 @@
+-module(create_database).
+-export([start/0]).
+
+start()->
+    DB = ets:new(database, [set,public]),
+    ets:insert(DB, {0, [1,2,3]}),
+    ets:.
+    %% [X || X <- lists:seq(0,9), X /= 1],
+    %% [io:fwrite("Url ~p Links: [~p,~p,~p]~n", [Url,Link1,Link2,Link3]),
+    %%  ets:insert(DB, {Url, [Link1,Link2,Link3] ) ||
+    %% 	Url <- lists:seq(0,5),
+    %% 	Link1 <- lists:seq(0,5),
+    %% 	Link2 <- lists:seq(0,4),
+    %% 	Link3 <- lists:seq(0,3),
+    %% 	Url =/= Link1,
+    %% 	Url =/= Link2,
+    %% 	Url =/= Link3,
+    %% 	Link1 =/= Link2,
+    %% 	Link2 =/= Link3,
+    %% 	Link3 =/= Link1
+    %%  ].
+%    ets:insert(ETS, {Counter, Names}),
+% io:fwrite("Url ~p Links: [~p]~n", [Url, [Link1,Link2,Link3]])
