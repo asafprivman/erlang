@@ -1,0 +1,76 @@
+%%%%%%%%%%%%% Node: %%%%%%%%%%%%%%%%%%%%%%%%%%%
+init_node(NodeID, MainPid):
+MapperIDs = create_mappers(NodeID)%V
+MainPid ! {mappers_created, NodeNum, MapperIDs}
+receive_save_all_mappers()%V
+MainPid ! {print, "init_node num ~p done.", [NodeID]}
+
+create_mappers(NodeID):
+for num of cores create mappers:
+spawn(create_mapper(MapperID, NodeID))
+MapperIDs.
+
+create_mapper(MapperID, NodeID):
+receive
+    {start, MainPid, MapperIDs} ->
+	put(main_pid, MainPid), put(mapper_IDs, MapperIDs),
+	mapper(MapperID, NodeID)
+
+mapper(MapperID, NodeID) ->
+    get(main_pid) ! {print, "mapper num ~p node num ~p done.", [MapperID, NodeID]},
+    mapper_zombie_until_all_reducers_die(MapperID, NodeID); % Might be bug here implement.
+mapper(MapperID, NodeID) ->
+    receive
+	{Sender, Parent, Article, NumOfLayersLeft} ->
+	    map_if_not_mapped(is_mapped(Article), Sender, Parent, Article, NumOfLayersLeft),
+	    mapper(MapperID, NodeID, NumOfLayersLeft);
+	kill
+	get(main_pid) ! {print, "mapper num ~p node num ~p killed.", [MapperID, NodeID]};
+
+is_mapped(Article) ->
+    case ets:lookup(Article) of
+	[] ->
+	    false
+	[_] ->                      % Might be bug here [_] or [_|_]
+	    true
+
+map_if_not_mapped(true, Sender, Parent, Article, NumOfLayersLeft) ->
+    Sender ! {i_exist, Parent, Article};
+map_if_not_mapped(false, Sender, Parent, Article, NumOfLayersLeft) ->
+    add_to_local_ets(),
+    Sender ! {add_me, Parent, Article},
+    spawn(reducer(Article, NumOfLayersLeft)).
+
+reducer(Article, NumOfLayersLeft):
+Links = get_links_from_ets(Article), %V
+Ref = erlang:make_ref(),
+send_to_all_mappers(Article, Links, NumOfLayersLeft, Ref),
+Wait_for_mappers_answers(Links),
+get(main_pid) ! {add_node, Article, links}.
+
+get_links_from_ets(Article) ->
+    case ets:lookup(database, Article) of % Might be bug here
+	[]->
+	    io:fwrite("Error didn't find article:[~p] in database.~n",[Article]),
+	    [];
+	[{Article,Links}]->
+	    Links
+    end.
+
+
+send_to_all_mappers(_, [], _, _) ->
+    done;
+send_to_all_mappers(Article, [Link|T], NumOfLayersLeft, Ref) ->
+    SendMapper(Article, Link, NumOfLayersLeft, Ref),
+    send_to_all_mappers(Article, T, NumOfLayersLeft, Ref).
+
+Wait_for_mappers_answers([Link|T]) ->
+    
+gather(0, _, L) -> L;
+gather(N, Ref, L) ->
+    receive
+	{Ref, Ret} -> gather(N-1, Ref, [Ret|L])
+    end.
+    
+
+%%%%%%%%%%%%% \Node: %%%%%%%%%%%%%%%%%%%%%%%%%%%

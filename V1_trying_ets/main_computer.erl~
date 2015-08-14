@@ -1,0 +1,50 @@
+%%%%%%%%%%%%% Main: %%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% Test Bench %%%%%
+test():
+NumOfNodes = 3
+NumOfLayers = 5
+create_nodes_for_test(NumOfNodes) %V
+Tree = init_main(NumOfNodes, NumOfLayers)%V
+print Tree
+print "Note to self, check tree correct add an assert ExpectedTree = Tree"
+
+create_nodes_for_test(NumOfNodes):
+for NodeID in NumOfNodes: 
+spawn(init_node(NodeID, MainPid))%V
+
+%%%% Tested code %%%%%
+init_main(NumOfNodes, NumOfLayers):
+send_ets_to_nodes()%V
+Tree = create_tree(RootArticle, NumOfLayers)%V
+kill_left_mappers()%V
+return Tree
+
+
+%TODO:send ets
+send_ets_to_nodes():
+%TODO:send ets
+Mappers = receive_mappers()%V
+send_mappers_all_mappers(Mappers)%V
+put(mappers,Mappers)
+
+
+create_tree(RootArticle, NumOfLayers):
+Ref = erlang:make_ref(),
+SendMapper(root, RootArticle, NumOfLayers, Ref)%V
+Tree = receive_layers([], NumOfLayers)%V
+Tree.
+
+
+SendMapper(Parent, Article, NumOfLayers, Ref) ->
+    Mapper = GetMappper(Article),
+    Mapper ! {self(), Parent, Article, NumOfLayers-1}.
+
+receive_layers(Tree, NumOfLayers):
+receive
+    {print} 
+    receive_layers(Tree, NumOfLayers)
+    {add_node}
+    receive_layers([node|Tree], NumOfLayers-1)
+
+%%%% \Tested code %%%%%%
+%%%%%%%%%%%%% \Main: %%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -1,0 +1,78 @@
+-module(create_database).
+-export([start/0,lookup/0]).
+
+start()->
+
+    DB = ets:new(database, [set,public,named_table]),
+    io:format("DB = [~p]~n", [DB]),
+    ets:insert(DB, {0, [1,2,3]}).
+    %% [X || X <- lists:seq(0,9), X /= 1],
+    %% [io:fwrite("Url ~p Links: [~p,~p,~p]~n", [Url,Link1,Link2,Link3]),
+    %%  ets:insert(DB, {Url, [Link1,Link2,Link3] ) ||
+    %% 	Url <- lists:seq(0,5),
+    %% 	Link1 <- lists:seq(0,5),
+    %% 	Link2 <- lists:seq(0,4),
+    %% 	Link3 <- lists:seq(0,3),
+    %% 	Url =/= Link1,
+    %% 	Url =/= Link2,
+    %% 	Url =/= Link3,
+    %% 	Link1 =/= Link2,
+    %% 	Link2 =/= Link3,
+    %% 	Link3 =/= Link1
+    %%  ].
+%    ets:insert(ETS, {Counter, Names}),
+% io:fwrite("Url ~p Links: [~p]~n", [Url, [Link1,Link2,Link3]])
+
+plan:
+create a test:
+       add a graph of vertices with lots of edges (not a tree).
+       run the map reduce.
+       print the tree.
+       assert certain checks.
+mapreduce
+
+create_tree() ->
+    ReducerIDs = lists:seq(1,erlang:system_info(logical_processors_available)),
+    pmap(fun create_reducer/1, ReducerIDs).
+
+    %% NumOfReducers = erlang:system_info(logical_processors_available),
+    %% put(reducers, [spawn(fun() -> create_user(ID) end) || ID <- ReducerIDs]),
+    %% create_mapper().
+
+create_reducer(ID) ->
+    
+
+lookup() ->
+    print_item(0).
+
+print_item(ItemKey) ->
+    case ets:lookup(database, ItemKey) of
+        [{Key, Value}] ->
+            io:format("Key ~p~n", [Key]),
+            io:format("Value ~p~n", [Value]);
+        [] ->
+            io:format("No item with key = ~p~n", [ItemKey])
+    end.
+
+
+% pmap, order is not important
+% pmap(reducer function, List of inputs for the reducer function)
+pmap(F, L) ->
+    S = self(),
+    Ref = erlang:make_ref(),
+    lists:foreach(fun(I) ->
+			  spawn(fun() -> do_f(S, Ref, F, I) end)
+		  end, L),
+    
+    startTree
+
+    %% gather the results
+    gather(length(L), Ref, []).
+
+do_f(Parent, Ref, F, I) ->
+    Parent ! {Ref, (catch F(I))}.
+gather(0, _, L) -> L;
+gather(N, Ref, L) ->
+    receive
+	{Ref, Ret} -> gather(N-1, Ref, [Ret|L])
+    end.
